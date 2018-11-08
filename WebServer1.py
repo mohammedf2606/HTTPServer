@@ -1,18 +1,13 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import os
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
+import threading
 
-# HTTPRequestHandler class
-class StaticServer(BaseHTTPRequestHandler):
+class Handler(BaseHTTPRequestHandler):
+
     def do_GET(self):
-        root = os.path.join(os.path.dirname(os.path.dirname(
-        os.path.abspath(__file__))), 'html')
-        # print(self.path)
-        if self.path == '/'':
-            filename = root + '/index.html'
-        else:
-            filename = root + self.path
-
-        slef.send_response(200)
+        filename = self.path.rsplit('/', 1)[-1]
+        # print(filename)
+        self.send_response(200)
         if filename[-4:] == '.css':
             self.send_header('Content-type', 'text/css')
         elif filename[-5:] == '.json':
@@ -24,15 +19,15 @@ class StaticServer(BaseHTTPRequestHandler):
         else:
             self.send_header('Content-type', 'text/html')
         self.end_headers()
-        with open(filename, 'rb') as fh:
-            html = fh.read()
-            #html = bytes(html, 'utf8')
-            self.wfile.write(html)
+        message = threading.currentThread().getName()
+        message += '\n'
+        self.wfile.write(message.encode(encoding='UTF-8'))
+        return
 
-def run(server_class=HTTPServer, handler_class=StaticServer, port=8000):
-    server_address = ('', port)
-    httpd = server_class(server_address, handler_class)
-    print('Starting httpd on port {}'.format(port))
-    httpd.serve_forever()
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    """Handle requests in a separate thread."""
 
-run()
+if __name__ == '__main__':
+    server = ThreadedHTTPServer(('localhost', 8080), Handler)
+    print('Starting server, use <Ctrl-C> to stop')
+    server.serve_forever()
